@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output
+
+# Caches
+.npm
+.eslintcache
+.rpt2_cache/
+
+# Bundlers
+.cache
+.parcel-cache
+
+# Misc
+node_modules/
+.yarn-integrity
+*.tgz
+.next
+.nuxt
+.serverless/
