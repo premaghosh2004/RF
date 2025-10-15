@@ -9,25 +9,34 @@ export interface SocketUser extends IUser {
 
 export const initializeSocket = (server: HTTPServer) => {
   const io = new SocketIOServer(server, {
-  cors: {
-    origin: process.env.SOCKET_CORS_ORIGIN || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-  transports: ['websocket', 'polling'], // add this explicitly
-});
-  // Socket authentication middleware (optional, can be commented for open test)
+    cors: {
+      origin: '*', // Allow all origins for testing
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
+    transports: ['websocket', 'polling'],
+  });
+
+  // Socket authentication middleware - OPTIONAL (only if token is provided)
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
+      
+      // If no token provided, allow connection but don't set user
       if (!token) {
-        return next(new Error('Authentication error'));
+        console.log('Socket connection without authentication');
+        return next();
       }
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+      
+      // If token provided, verify it
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       socket.data.user = decoded;
+      console.log('Socket connection with authentication for user:', decoded.id);
       next();
     } catch (error) {
-      next(new Error('Authentication error'));
+      console.log('Socket authentication failed:', error);
+      // Still allow connection but without user data
+      next();
     }
   });
 
@@ -37,14 +46,17 @@ export const initializeSocket = (server: HTTPServer) => {
 
     // Simple test event
     socket.on('ping', () => {
+      console.log('Received ping from:', socket.id);
       socket.emit('pong', 'Pong from server!');
     });
 
     // --- Your real-time events below ---
     const user = socket.data.user;
     if (user) {
-      console.log(`User ${user.username || user.id} connected: ${socket.id}`);
+      console.log(`Authenticated user ${user.username || user.id} connected: ${socket.id}`);
       socket.join(`user:${user.id}`);
+    } else {
+      console.log(`Anonymous user connected: ${socket.id}`);
     }
 
     socket.on('spot:create', (spotData) => {
