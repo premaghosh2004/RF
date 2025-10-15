@@ -1,10 +1,7 @@
-import mongoose from 'mongoose';
-
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: {
-      _id: mongoose.Types.ObjectId;
-      id?: string;
-    };
+// src/types/express.d.ts
+import { IUser } from '../models/User';
+declare module 'express' {
+  export interface Request {
+    user?: IUser;
   }
 }

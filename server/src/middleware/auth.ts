@@ -1,11 +1,19 @@
+// src/middleware/auth.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
-import mongoose from 'mongoose';
 
 interface DecodedToken extends JwtPayload {
   id: string;
 }
+
+// Make sure you have extended Express's Request type in src/types/express.d.ts:
+// import { IUser } from '../models/User';
+// declare module 'express-serve-static-core' {
+//   interface Request {
+//     user?: IUser;
+//   }
+// }
 
 export const authenticate = async (
   req: Request,
@@ -14,7 +22,6 @@ export const authenticate = async (
 ): Promise<void> => {
   try {
     let token = req.header('Authorization');
-
     if (!token || !token.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
@@ -22,9 +29,7 @@ export const authenticate = async (
       });
       return;
     }
-
-    token = token.slice(7); // Remove 'Bearer ' prefix
-
+    token = token.slice(7); // Remove 'Bearer '
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       res.status(500).json({
@@ -33,9 +38,7 @@ export const authenticate = async (
       });
       return;
     }
-
     const decoded = jwt.verify(token, secret) as DecodedToken;
-    
     const user = await User.findById(decoded.id).select('-password') as IUser | null;
     if (!user) {
       res.status(401).json({
@@ -44,12 +47,7 @@ export const authenticate = async (
       });
       return;
     }
-
-    req.user = {
-      _id: user._id as mongoose.Types.ObjectId,
-      id: user._id.toString(),
-    };
-    
+    req.user = user; // Assign the full user object
     next();
   } catch (error: any) {
     res.status(401).json({
@@ -67,30 +65,22 @@ export const optionalAuth = async (
 ): Promise<void> => {
   try {
     let token = req.header('Authorization');
-
     if (!token || !token.startsWith('Bearer ')) {
       return next();
     }
-
     token = token.slice(7);
-
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       return next();
     }
-
     const decoded = jwt.verify(token, secret) as DecodedToken;
     const user = await User.findById(decoded.id).select('-password') as IUser | null;
-    
     if (user) {
-      req.user = {
-        _id: user._id as mongoose.Types.ObjectId,
-      };
+      req.user = user;
     }
-
     next();
   } catch (error) {
-    // If token is invalid, just continue without user
     next();
   }
 };
+

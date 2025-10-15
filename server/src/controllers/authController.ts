@@ -4,7 +4,7 @@ import User, { IUser } from '../models/User';
 import { validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: IUser;
 }
 
