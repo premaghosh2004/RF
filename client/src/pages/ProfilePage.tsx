@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Camera, Save, Eye, MapPin, DollarSign, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,19 +13,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const ProfilePage = () => {
+  const { user, token, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: "John Doe",
-    email: "john@example.com",
+    name: "",
+    email: "",
     gender: "male",
-    age: "25",
-    phone: "+1234567890",
-    location: "New York, NY",
-    rent: "800",
-    duration: "6",
-    bio: "Looking for a clean, respectful roommate who enjoys a quiet environment.",
+    age: "",
+    phone: "",
+    location: "",
+    rent: "",
+    duration: "",
+    bio: "",
     foodPref: "vegetarian",
     smoking: false,
     pets: false,
@@ -33,13 +38,75 @@ const ProfilePage = () => {
     sleepSchedule: "early",
   });
 
-  const handleSave = () => {
-    toast.success("Profile updated successfully!");
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Load user data when component mounts
+  useEffect(() => {
+    if (user) {
+      setProfileData(prev => ({
+        ...prev,
+        name: user.username || "",
+        email: user.email || "",
+        bio: user.bio || "",
+        location: user.location || "",
+      }));
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!token) {
+      toast.error("Please login to update your profile");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Note: You'll need to create a profile update endpoint in your backend
+      const response = await fetch("http://localhost:5000/api/profile/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Profile updated successfully!");
+      } else {
+        toast.error(data.message || "Failed to update profile");
+      }
+    } catch (error) {
+      console.error("Profile update error:", error);
+      toast.error("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePreview = () => {
     toast.info("Preview feature coming soon!");
   };
+
+  // Show loading or redirect if not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen pt-20 bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 bg-background">
@@ -62,7 +129,7 @@ const ProfilePage = () => {
                 <div className="text-center space-y-4">
                   <div className="relative mx-auto w-40 h-40">
                     <img
-                      src="https://api.dicebear.com/7.x/avataaars/svg?seed=User"
+                      src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
                       alt="Profile"
                       className="w-full h-full rounded-full ring-4 ring-primary/20"
                     />
@@ -74,8 +141,13 @@ const ProfilePage = () => {
                     </Button>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold">{profileData.name}</h3>
-                    <p className="text-sm text-muted-foreground">{profileData.email}</p>
+                    <h3 className="text-xl font-bold">{user.username}</h3>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    {user.isVerified && (
+                      <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full mt-2">
+                        Verified
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -103,9 +175,10 @@ const ProfilePage = () => {
                   <Button
                     onClick={handleSave}
                     className="w-full gradient-primary text-white glow-effect"
+                    disabled={isLoading}
                   >
                     <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                    {isLoading ? "Saving..." : "Save Changes"}
                   </Button>
                   <Button
                     onClick={handlePreview}
@@ -150,6 +223,7 @@ const ProfilePage = () => {
                         setProfileData({ ...profileData, email: e.target.value })
                       }
                       className="bg-background"
+                      disabled
                     />
                   </div>
                   <div className="space-y-2">
