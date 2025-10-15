@@ -4,6 +4,10 @@ import User, { IUser } from '../models/User';
 import { validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 
+interface AuthRequest extends Request {
+  user?: IUser;
+}
+
 const generateToken = (userId: string): string => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
@@ -145,7 +149,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
+export const getProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -188,6 +192,64 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({
       success: false,
       message: 'Server error fetching profile',
+      error: error.message,
+    });
+  }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Unauthorized',
+      });
+      return;
+    }
+
+    const { name, bio, location, phone, age, gender } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          username: name || req.user.username,
+          bio: bio || req.user.bio,
+          location: location || req.user.location,
+          // Add other fields as needed based on your User model
+        },
+      },
+      { new: true, runValidators: true }
+    ) as IUser | null;
+
+    if (!updatedUser) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: updatedUser._id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          avatar: updatedUser.avatar,
+          bio: updatedUser.bio,
+          location: updatedUser.location,
+          isVerified: updatedUser.isVerified,
+          createdAt: updatedUser.createdAt,
+        },
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating profile',
       error: error.message,
     });
   }
