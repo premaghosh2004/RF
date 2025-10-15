@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from '@/lib/api';
-import type { PublicUserProfile } from '@/types/profile';
+import {api} from '../lib/api';
+import type { PublicUserProfile } from '../types/profile';
 
 export interface ProfilesQuery {
   page?: number; limit?: number; city?: string; state?: string; minRent?: number; maxRent?: number;
