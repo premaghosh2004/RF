@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { Home, Info, Users, HelpCircle, User, LogOut, Settings } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Home, Info, Users, HelpCircle, User, LogOut, Settings, LogIn, UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   // Handle scroll effect
   if (typeof window !== 'undefined') {
@@ -27,6 +32,12 @@ const Navbar = () => {
     { to: "/find-roomie", label: "Find Roomie", icon: Users },
     { to: "/help", label: "Help", icon: HelpCircle },
   ];
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate("/");
+  };
 
   return (
     <nav
@@ -64,39 +75,63 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Profile Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="focus:outline-none">
-              <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-primary/20 hover:ring-primary transition-all">
-                <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-popover">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-xs text-muted-foreground">john@example.com</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <NavLink to="/profile" className="flex items-center cursor-pointer">
-                  <User className="w-4 h-4 mr-2" />
-                  <span>Profile</span>
-                </NavLink>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                <Settings className="w-4 h-4 mr-2" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-destructive">
-                <LogOut className="w-4 h-4 mr-2" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Auth Section */}
+          {isAuthenticated && user ? (
+            /* Authenticated User - Show Profile Dropdown */
+            <DropdownMenu>
+              <DropdownMenuTrigger className="focus:outline-none">
+                <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-primary/20 hover:ring-primary transition-all">
+                  <AvatarImage src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} />
+                  <AvatarFallback>{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">{user.username}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <NavLink to="/profile" className="flex items-center cursor-pointer">
+                    <User className="w-4 h-4 mr-2" />
+                    <span>Profile</span>
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Settings className="w-4 h-4 mr-2" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer text-destructive" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            /* Unauthenticated - Show Login/Signup Buttons */
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/login")}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Login
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate("/signup")}
+                className="gradient-primary text-white glow-effect"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Sign Up
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
