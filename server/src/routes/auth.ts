@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getProfile } from '../controllers/authController';
+import { register, login, getProfile, updateProfile } from '../controllers/authController'; // ADD updateProfile import
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
@@ -41,5 +41,7 @@ const loginValidation = [
 router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 router.get('/profile', authenticate, getProfile);
+router.put('/profile/update', authenticate, updateProfile); // ADD this route
 
 export default router;
+

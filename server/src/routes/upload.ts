@@ -79,4 +79,43 @@ router.post('/avatar', authenticate, uploadSingle, async (req: Request, res: Res
   }
 });
 
+// --------------------------
+// Upload single image (room photo)
+// --------------------------
+router.post('/room-photo', authenticate, uploadSingle, async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image provided',
+      });
+    }
+
+    const uploadResult = await CloudinaryService.uploadImage(
+      file.buffer,
+      file.originalname,
+      'images'
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Room photo uploaded successfully',
+      data: {
+        image: {
+          url: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+        },
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error uploading room photo',
+      error: error.message,
+    });
+  }
+});
+
 export default router;
