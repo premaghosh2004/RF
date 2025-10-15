@@ -25,29 +25,6 @@ const About = () => {
     },
   ];
 
-  const team = [
-    {
-      name: "Sarah Johnson",
-      role: "Founder & CEO",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-    },
-    {
-      name: "Michael Chen",
-      role: "Head of Product",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Michael",
-    },
-    {
-      name: "Emily Rodriguez",
-      role: "Lead Designer",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily",
-    },
-    {
-      name: "David Kim",
-      role: "Chief Technology Officer",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
-    },
-  ];
-
   return (
     <div className="min-h-screen pt-20">
       {/* Hero Section */}
@@ -99,12 +76,11 @@ const About = () => {
             <div className="space-y-6 text-lg text-muted-foreground">
               <p>
                 RoomieMatch was born from a simple frustration: finding a compatible roommate 
-                shouldn't be this hard. Our founder, Sarah Johnson, spent weeks browsing countless 
-                listings and meeting dozens of incompatible people before finally finding her 
-                perfect roommate match.
+                shouldn't be this hard. Our founders, Prema and her co-founder, experienced firsthand 
+                the challenges of finding the right living partner in today's busy world.
               </p>
               <p>
-                She realized there had to be a better way. What if technology could help match 
+                They realized there had to be a better way. What if technology could help match 
                 people based on lifestyle compatibility, not just location and rent? That's when 
                 RoomieMatch was created.
               </p>
@@ -121,60 +97,128 @@ const About = () => {
         </div>
       </section>
 
-      {/* Team Section */}
+      {/* Team Section - Direct Image Implementation */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-4">
             Meet Our <span className="text-gradient">Team</span>
           </h2>
           <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            Passionate individuals dedicated to helping you find your perfect roommate
+            Two passionate individuals dedicated to helping you find your perfect roommate
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {team.map((member, index) => (
-              <Card
-                key={index}
-                className="bg-card border-border hover-scale card-shadow group"
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden ring-4 ring-primary/20 group-hover:ring-primary transition-all">
+          {/* Centered grid for 2 members with larger cards */}
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl">
+              
+              {/* Prema's Card */}
+              <Card className="bg-card border-border hover-scale card-shadow group w-full max-w-sm mx-auto">
+                <CardContent className="p-8 text-center">
+                  <div className="w-40 h-40 mx-auto mb-6 rounded-full overflow-hidden ring-4 ring-primary/20 group-hover:ring-primary transition-all">
                     <img
-                      src={member.image}
-                      alt={member.name}
+                      src="/Passport_size.jpg"
+                      alt="Prema Ghosh - Founder & CEO"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to prema.png if Passport_size.jpg fails
+                        e.currentTarget.src = "/prema.png";
+                      }}
                     />
                   </div>
-                  <h3 className="text-xl font-bold mb-1">{member.name}</h3>
-                  <p className="text-primary font-medium">{member.role}</p>
+                  <h3 className="text-2xl font-bold mb-2">Prema Ghosh</h3>
+                  <p className="text-primary font-medium text-lg mb-4">Founder & Full Stack Developer</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                   Tech enthusiast dedicated to building innovative matching algorithms and seamless user experiences. 
+                  </p>
                 </CardContent>
               </Card>
-            ))}
+
+              {/* Second Team Member Card */}
+              <Card className="bg-card border-border hover-scale card-shadow group w-full max-w-sm mx-auto">
+                <CardContent className="p-8 text-center">
+                  <div className="w-40 h-40 mx-auto mb-6 rounded-full overflow-hidden ring-4 ring-primary/20 group-hover:ring-primary transition-all">
+                    <img
+                      src="/sagnik.jpg"
+                      alt="Co-Founder"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to dicebear avatar if prema.png fails
+                        e.currentTarget.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=Cofounder";
+                      }}
+                    />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">Sagnik Biswas</h3>
+                  <p className="text-primary font-medium text-lg mb-4">Co-Founder & Full Stack Developer</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    Passionate about creating safe, community-driven solutions for modern living challenges and building smart, scalable tech solutions.
+                  </p>
+                </CardContent>
+              </Card>
+
+            </div>
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
       <section className="py-20 gradient-hero">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="space-y-2">
-              <div className="text-5xl font-bold">10,000+</div>
-              <div className="text-lg text-foreground/80">Active Users</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-5xl font-bold">5,000+</div>
-              <div className="text-lg text-foreground/80">Successful Matches</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-5xl font-bold">50+</div>
-              <div className="text-lg text-foreground/80">Cities Covered</div>
-            </div>
-          </div>
+  <div className="container mx-auto px-4">
+    <div className="text-center mb-12">
+      <h2 className="text-4xl font-bold mb-4">
+        Serving <span className="text-white">Kolkata</span>
+      </h2>
+      <p className="text-xl text-foreground/90 max-w-2xl mx-auto">
+        Building the largest roommate community in the City of Joy
+      </p>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+      <div className="space-y-2">
+        <div className="text-5xl font-bold">25+</div>
+        <div className="text-lg text-foreground/80">Kolkata Areas</div>
+        <div className="text-sm text-foreground/60">
+          Salt Lake, New Town, Park Street, Howrah & more
         </div>
-      </section>
+      </div>
+      <div className="space-y-2">
+        <div className="text-5xl font-bold">500+</div>
+        <div className="text-lg text-foreground/80">Active Listings</div>
+        <div className="text-sm text-foreground/60">
+          Fresh roommate opportunities daily
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="text-5xl font-bold">₹3K-25K</div>
+        <div className="text-lg text-foreground/80">Rent Range</div>
+        <div className="text-sm text-foreground/60">
+          Options for every budget in Kolkata
+        </div>
+      </div>
+    </div>
+
+    {/* Popular Areas */}
+    <div className="mt-16 text-center">
+      <h3 className="text-2xl font-bold mb-6 text-white">Popular Areas We Cover</h3>
+      <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
+        {[
+          'Salt Lake', 'New Town', 'Park Street', 'Howrah', 'Ballygunge', 
+          'Gariahat', 'Jadavpur', 'Tollygunge', 'Garia', 'Behala',
+          'Dum Dum', 'Barasat', 'Rajarhat', 'Kestopur', 'Baguiati'
+        ].map((area, index) => (
+          <span 
+            key={index}
+            className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-white text-sm font-medium hover:bg-white/20 transition-colors"
+          >
+            {area}
+          </span>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
     </div>
   );
 };
 
 export default About;
+

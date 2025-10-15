@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import profilesRouter from './routes/profiles';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -57,6 +58,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/spots', spotRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/profiles', profilesRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

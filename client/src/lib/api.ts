@@ -75,6 +75,29 @@ export const spotAPI = {
   addComment: (id: string, data: { content: string; parentComment?: string }) =>
     api.post(`/spots/${id}/comments`, data),
 };
+export const profilesAPI = {
+  getProfiles: (params?: {
+    page?: number;
+    limit?: number;
+    city?: string;
+    state?: string;
+    minRent?: number;
+    maxRent?: number;
+    gender?: string;
+    foodPreference?: string;
+    duration?: string;
+    sortBy?: string;
+  }) => api.get('/profiles', { params }),
+  
+  getProfile: (id: string) =>
+    api.get(`/profiles/${id}`),
+    
+  getSuggestions: (params?: { q?: string; type?: string }) =>
+    api.get('/profiles/search/suggestions', { params }),
+    
+  saveProfile: (id: string) =>
+    api.post(`/profiles/${id}/save`),
+};
 
 export const uploadAPI = {
   uploadImages: (files: FileList) => {
