@@ -1,14 +1,22 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 import { validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 
+// ✅ Proper type-safe JWT generator
 const generateToken = (userId: string): string => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRE || '7d',
-  });
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET not defined');
+
+  const options: jwt.SignOptions = {
+  expiresIn: (process.env.JWT_EXPIRE || '7d') as jwt.SignOptions['expiresIn'],
 };
 
+  return jwt.sign({ id: userId }, secret, options);
+};
+
+// ✅ Register controller
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -23,7 +31,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const { username, email, password } = req.body;
 
-    // Check if user already exists
+    // Check if user exists
     const existingUser = await User.findOne({
       $or: [{ email }, { username }],
     });
@@ -37,23 +45,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Create new user
-    const user = new User({
-      username,
-      email,
-      password,
-    });
-
+    const user = new User({ username, email, password });
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id.toString());
+    // ✅ Safely convert _id to string
+    const userId = (user._id as mongoose.Types.ObjectId).toString();
+    const token = generateToken(userId);
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: {
         user: {
-          id: user._id,
+          id: userId,
           username: user.username,
           email: user.email,
           avatar: user.avatar,
@@ -74,6 +78,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// ✅ Login controller
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -87,9 +92,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { email, password } = req.body;
-
-    // Find user by email
     const user = await User.findOne({ email }).select('+password');
+
     if (!user) {
       res.status(401).json({
         success: false,
@@ -98,7 +102,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       res.status(401).json({
@@ -108,15 +111,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Generate token
-    const token = generateToken(user._id.toString());
+    const userId = (user._id as mongoose.Types.ObjectId).toString();
+    const token = generateToken(userId);
 
     res.status(200).json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          id: user._id,
+          id: userId,
           username: user.username,
           email: user.email,
           avatar: user.avatar,
@@ -137,9 +140,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// ✅ Get Profile controller
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.user?.id)
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Unauthorized: Missing user ID',
+      });
+      return;
+    }
+
+    const user = await User.findById(userId)
       .populate('followers', 'username avatar')
       .populate('following', 'username avatar');
 
@@ -155,7 +168,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
       success: true,
       data: {
         user: {
-          id: user._id,
+          id: (user._id as any).toString(),
           username: user.username,
           email: user.email,
           avatar: user.avatar,
@@ -176,3 +189,4 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     });
   }
 };
+

@@ -30,11 +30,12 @@
       "@/routes/*": ["src/routes/*"],
       "@/services/*": ["src/services/*"],
       "@/types/*": ["src/types/*"],
-      "@/utils/*": ["src/utils/*"]
+      "@/utils/*": ["src/utils/*"],
+      "typeRoots": ["./src/types", "./node_modules/@types"]
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*.ts", "src/types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
