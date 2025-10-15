@@ -1,21 +1,24 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { CloudinaryService } from '../services/cloudinaryService';
 import { authenticate } from '../middleware/auth';
 import { uploadMultiple, uploadSingle } from '../middleware/upload';
 
 const router = express.Router();
 
+// --------------------------
 // Upload multiple images
-router.post('/images', authenticate, uploadMultiple, async (req, res) => {
+// --------------------------
+router.post('/images', authenticate, uploadMultiple, async (req: Request, res: Response) => {
   try {
-    if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+    const files = req.files as Express.Multer.File[] | undefined;
+
+    if (!files || files.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'No images provided',
       });
     }
 
-    const files = req.files as Express.Multer.File[];
     const uploadResults = await CloudinaryService.uploadMultipleImages(files);
 
     const imageUrls = uploadResults.map(result => ({
@@ -23,13 +26,13 @@ router.post('/images', authenticate, uploadMultiple, async (req, res) => {
       publicId: result.public_id,
     }));
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Images uploaded successfully',
       data: { images: imageUrls },
     });
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error uploading images',
       error: error.message,
@@ -37,10 +40,14 @@ router.post('/images', authenticate, uploadMultiple, async (req, res) => {
   }
 });
 
-// Upload single image (for avatar)
-router.post('/avatar', authenticate, uploadSingle, async (req, res) => {
+// --------------------------
+// Upload single image (avatar)
+// --------------------------
+router.post('/avatar', authenticate, uploadSingle, async (req: Request, res: Response) => {
   try {
-    if (!req.file) {
+    const file = req.file;
+
+    if (!file) {
       return res.status(400).json({
         success: false,
         message: 'No image provided',
@@ -48,12 +55,12 @@ router.post('/avatar', authenticate, uploadSingle, async (req, res) => {
     }
 
     const uploadResult = await CloudinaryService.uploadImage(
-      req.file.buffer,
-      req.file.originalname,
+      file.buffer,
+      file.originalname,
       'avatars'
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Avatar uploaded successfully',
       data: {
@@ -64,7 +71,7 @@ router.post('/avatar', authenticate, uploadSingle, async (req, res) => {
       },
     });
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error uploading avatar',
       error: error.message,

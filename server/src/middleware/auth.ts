@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import User, { IUser } from '../models/User';
+import mongoose from 'mongoose';
+
+interface DecodedToken extends JwtPayload {
+  id: string;
+}
 
 export const authenticate = async (
   req: Request,
@@ -20,9 +25,18 @@ export const authenticate = async (
 
     token = token.slice(7); // Remove 'Bearer ' prefix
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      res.status(500).json({
+        success: false,
+        message: 'Server configuration error',
+      });
+      return;
+    }
+
+    const decoded = jwt.verify(token, secret) as DecodedToken;
     
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id).select('-password') as IUser | null;
     if (!user) {
       res.status(401).json({
         success: false,
@@ -31,7 +45,11 @@ export const authenticate = async (
       return;
     }
 
-    req.user = user;
+    req.user = {
+      _id: user._id as mongoose.Types.ObjectId,
+      id: user._id.toString(),
+    };
+    
     next();
   } catch (error: any) {
     res.status(401).json({
@@ -56,11 +74,18 @@ export const optionalAuth = async (
 
     token = token.slice(7);
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
-    const user = await User.findById(decoded.id).select('-password');
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, secret) as DecodedToken;
+    const user = await User.findById(decoded.id).select('-password') as IUser | null;
     
     if (user) {
-      req.user = user;
+      req.user = {
+        _id: user._id as mongoose.Types.ObjectId,
+      };
     }
 
     next();

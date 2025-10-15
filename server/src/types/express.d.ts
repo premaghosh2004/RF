@@ -1,9 +1,10 @@
-import { IUser } from '../models/User';
+import mongoose from 'mongoose';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: {
+      _id: mongoose.Types.ObjectId;
+      id?: string;
+    };
   }
 }

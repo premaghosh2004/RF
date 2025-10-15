@@ -2,16 +2,19 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 import { validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 
 const generateToken = (userId: string): string => {
-  const secret = process.env.JWT_SECRET as string;
+  const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error('JWT_SECRET environment variable is not defined');
   }
-
-  return jwt.sign({ id: userId }, secret, {
-    expiresIn: process.env.JWT_EXPIRE || '7d',
-  });
+  
+  const payload = { id: userId };
+  const options = { expiresIn: process.env.JWT_EXPIRE || '7d' };
+  
+  // @ts-ignore - TypeScript has issues with expiresIn type but it's valid
+  return jwt.sign(payload, secret, options);
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -51,7 +54,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     await user.save();
 
     // Generate token
-    const token = generateToken(user._id.toString());
+    const token = generateToken((user._id as mongoose.Types.ObjectId).toString());
 
     res.status(201).json({
       success: true,
@@ -114,7 +117,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate token
-    const token = generateToken(user._id.toString());
+    const token = generateToken((user._id as mongoose.Types.ObjectId).toString());
 
     res.status(200).json({
       success: true,
