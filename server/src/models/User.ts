@@ -9,6 +9,22 @@ export interface IUser extends Document {
   avatar?: string;
   bio?: string;
   location?: string;
+  
+  // Add all the profile fields
+  age?: number;
+  phone?: string;
+  gender?: string;
+  rent?: number;
+  duration?: number;
+  roomPhoto?: string;
+  
+  // Roommate preferences
+  foodPref?: string;
+  smoking?: boolean;
+  pets?: boolean;
+  cleanliness?: string;
+  sleepSchedule?: string;
+  
   followers: mongoose.Types.ObjectId[];
   following: mongoose.Types.ObjectId[];
   isVerified: boolean;
@@ -45,12 +61,64 @@ const UserSchema = new Schema<IUser>({
   },
   bio: {
     type: String,
-    maxlength: 160,
+    maxlength: 500,
   },
   location: {
     type: String,
     maxlength: 100,
   },
+  
+  // Add all profile fields
+  age: {
+    type: Number,
+    min: 18,
+    max: 100,
+  },
+  phone: {
+    type: String,
+    maxlength: 20,
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other'],
+  },
+  rent: {
+    type: Number,
+    min: 0,
+  },
+  duration: {
+    type: Number,
+    min: 1,
+  },
+  roomPhoto: {
+    type: String,
+  },
+  
+  // Roommate preferences
+  foodPref: {
+    type: String,
+    enum: ['vegetarian', 'non-vegetarian', 'vegan', 'any'],
+    default: 'any',
+  },
+  smoking: {
+    type: Boolean,
+    default: false,
+  },
+  pets: {
+    type: Boolean,
+    default: false,
+  },
+  cleanliness: {
+    type: String,
+    enum: ['very-high', 'high', 'moderate', 'relaxed'],
+    default: 'moderate',
+  },
+  sleepSchedule: {
+    type: String,
+    enum: ['early', 'regular', 'late', 'flexible'],
+    default: 'flexible',
+  },
+  
   followers: [{
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -86,3 +154,4 @@ UserSchema.methods.comparePassword = async function(candidatePassword: string): 
 };
 
 export default mongoose.model<IUser>('User', UserSchema);
+

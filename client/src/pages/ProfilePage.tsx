@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Camera, Save, Eye, MapPin, DollarSign, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,14 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const ProfilePage = () => {
-  const { user, token, isAuthenticated } = useAuth();
+  const { user, token, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingRoom, setIsUploadingRoom] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const roomPhotoInputRef = useRef<HTMLInputElement>(null);
+  
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -38,26 +43,147 @@ const ProfilePage = () => {
     sleepSchedule: "early",
   });
 
-  // Redirect to login if not authenticated
+  // Wait for auth to finish loading before redirecting
   useEffect(() => {
+    if (isLoading) return;
     if (!isAuthenticated) {
       navigate("/login");
-      return;
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
-  // Load user data when component mounts
+  // CHANGED: Load complete profile data from database
   useEffect(() => {
-    if (user) {
-      setProfileData(prev => ({
-        ...prev,
-        name: user.username || "",
-        email: user.email || "",
-        bio: user.bio || "",
-        location: user.location || "",
-      }));
+    const loadCompleteProfileData = async () => {
+      if (!token) return;
+      
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        const data = await response.json();
+        if (data.success && data.data.user) {
+          const userData = data.data.user;
+          setProfileData({
+            name: userData.username || "",
+            email: userData.email || "",
+            bio: userData.bio || "",
+            location: userData.location || "",
+            age: userData.age?.toString() || "",
+            phone: userData.phone || "",
+            gender: userData.gender || "male",
+            rent: userData.rent?.toString() || "",
+            duration: userData.duration?.toString() || "",
+            foodPref: userData.foodPref || "vegetarian",
+            smoking: userData.smoking || false,
+            pets: userData.pets || false,
+            cleanliness: userData.cleanliness || "high",
+            sleepSchedule: userData.sleepSchedule || "early",
+          });
+        }
+      } catch (error) {
+        console.error('Error loading complete profile data:', error);
+      }
+    };
+    
+    if (user && token) {
+      loadCompleteProfileData();
     }
-  }, [user]);
+  }, [user, token]);
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !token) return;
+
+    setIsUploadingAvatar(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/upload/avatar', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // UPDATE: Also update the user's avatar in database
+        const updateResponse = await fetch("http://localhost:5000/api/auth/profile/update", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ avatar: data.data.image.url }),
+        });
+
+        if (updateResponse.ok) {
+          toast.success('Profile picture updated!');
+          // Refresh the page or update auth context
+          window.location.reload();
+        } else {
+          toast.error('Failed to save avatar to profile');
+        }
+      } else {
+        toast.error(data.message || 'Upload failed');
+      }
+    } catch (error) {
+      toast.error('Network error during upload');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  // CHANGED: Updated room photo upload to use /room-photo endpoint
+  const handleRoomPhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !token) return;
+
+    setIsUploadingRoom(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/upload/room-photo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Save room photo URL to profile
+        const updateResponse = await fetch("http://localhost:5000/api/auth/profile/update", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ roomPhoto: data.data.image.url }),
+        });
+
+        if (updateResponse.ok) {
+          toast.success('Room photo updated!');
+        } else {
+          toast.error('Failed to save room photo');
+        }
+      } else {
+        toast.error(data.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Room upload error:', error);
+      toast.error('Network error during upload');
+    } finally {
+      setIsUploadingRoom(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!token) {
@@ -65,11 +191,10 @@ const ProfilePage = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
-      // Note: You'll need to create a profile update endpoint in your backend
-      const response = await fetch("http://localhost:5000/api/profile/update", {
+      const response = await fetch("http://localhost:5000/api/auth/profile/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -89,7 +214,7 @@ const ProfilePage = () => {
       console.error("Profile update error:", error);
       toast.error("Network error. Please try again.");
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -97,7 +222,18 @@ const ProfilePage = () => {
     toast.info("Preview feature coming soon!");
   };
 
-  // Show loading or redirect if not authenticated
+  // Show loading while auth initializes
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading your session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message only after loading completes
   if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen pt-20 bg-background flex items-center justify-center">
@@ -133,9 +269,18 @@ const ProfilePage = () => {
                       alt="Profile"
                       className="w-full h-full rounded-full ring-4 ring-primary/20"
                     />
+                    <input
+                      type="file"
+                      ref={avatarInputRef}
+                      onChange={handleAvatarUpload}
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                    />
                     <Button
                       size="icon"
                       className="absolute bottom-0 right-0 rounded-full gradient-primary text-white"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
                     >
                       <Camera className="w-4 h-4" />
                     </Button>
@@ -159,9 +304,18 @@ const ProfilePage = () => {
                       alt="Room"
                       className="w-full h-40 object-cover rounded-lg"
                     />
+                    <input
+                      type="file"
+                      ref={roomPhotoInputRef}
+                      onChange={handleRoomPhotoUpload}
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                    />
                     <Button
                       size="icon"
                       className="absolute bottom-2 right-2 rounded-full gradient-primary text-white"
+                      onClick={() => roomPhotoInputRef.current?.click()}
+                      disabled={isUploadingRoom}
                     >
                       <Camera className="w-4 h-4" />
                     </Button>
@@ -175,10 +329,10 @@ const ProfilePage = () => {
                   <Button
                     onClick={handleSave}
                     className="w-full gradient-primary text-white glow-effect"
-                    disabled={isLoading}
+                    disabled={isSaving}
                   >
                     <Save className="w-4 h-4 mr-2" />
-                    {isLoading ? "Saving..." : "Save Changes"}
+                    {isSaving ? "Saving..." : "Save Changes"}
                   </Button>
                   <Button
                     onClick={handlePreview}
@@ -459,3 +613,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+

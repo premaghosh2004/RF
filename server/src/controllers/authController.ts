@@ -71,6 +71,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           avatar: user.avatar,
           bio: user.bio,
           location: user.location,
+          age: user.age,
+          phone: user.phone,
+          gender: user.gender,
+          rent: user.rent,
+          duration: user.duration,
+          roomPhoto: user.roomPhoto,
+          foodPref: user.foodPref,
+          smoking: user.smoking,
+          pets: user.pets,
+          cleanliness: user.cleanliness,
+          sleepSchedule: user.sleepSchedule,
           isVerified: user.isVerified,
           createdAt: user.createdAt,
         },
@@ -134,6 +145,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           avatar: user.avatar,
           bio: user.bio,
           location: user.location,
+          age: user.age,
+          phone: user.phone,
+          gender: user.gender,
+          rent: user.rent,
+          duration: user.duration,
+          roomPhoto: user.roomPhoto,
+          foodPref: user.foodPref,
+          smoking: user.smoking,
+          pets: user.pets,
+          cleanliness: user.cleanliness,
+          sleepSchedule: user.sleepSchedule,
           isVerified: user.isVerified,
           createdAt: user.createdAt,
         },
@@ -181,6 +203,17 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
           avatar: user.avatar,
           bio: user.bio,
           location: user.location,
+          age: user.age,
+          phone: user.phone,
+          gender: user.gender,
+          rent: user.rent,
+          duration: user.duration,
+          roomPhoto: user.roomPhoto,
+          foodPref: user.foodPref,
+          smoking: user.smoking,
+          pets: user.pets,
+          cleanliness: user.cleanliness,
+          sleepSchedule: user.sleepSchedule,
           followers: user.followers,
           following: user.following,
           isVerified: user.isVerified,
@@ -207,18 +240,34 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const { name, bio, location, phone, age, gender } = req.body;
+    const { 
+      name, bio, location, phone, age, gender, 
+      rent, duration, foodPref, smoking, pets, 
+      cleanliness, sleepSchedule, avatar, roomPhoto 
+    } = req.body;
+
+    const updateData: any = {};
+    
+    // Only update fields that are provided
+    if (name !== undefined) updateData.username = name;
+    if (bio !== undefined) updateData.bio = bio;
+    if (location !== undefined) updateData.location = location;
+    if (phone !== undefined) updateData.phone = phone;
+    if (age !== undefined) updateData.age = Number(age);
+    if (gender !== undefined) updateData.gender = gender;
+    if (rent !== undefined) updateData.rent = Number(rent);
+    if (duration !== undefined) updateData.duration = Number(duration);
+    if (foodPref !== undefined) updateData.foodPref = foodPref;
+    if (smoking !== undefined) updateData.smoking = smoking;
+    if (pets !== undefined) updateData.pets = pets;
+    if (cleanliness !== undefined) updateData.cleanliness = cleanliness;
+    if (sleepSchedule !== undefined) updateData.sleepSchedule = sleepSchedule;
+    if (avatar !== undefined) updateData.avatar = avatar;
+    if (roomPhoto !== undefined) updateData.roomPhoto = roomPhoto;
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      {
-        $set: {
-          username: name || req.user.username,
-          bio: bio || req.user.bio,
-          location: location || req.user.location,
-          // Add other fields as needed based on your User model
-        },
-      },
+      { $set: updateData },
       { new: true, runValidators: true }
     ) as IUser | null;
 
@@ -241,6 +290,17 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
           avatar: updatedUser.avatar,
           bio: updatedUser.bio,
           location: updatedUser.location,
+          age: updatedUser.age,
+          phone: updatedUser.phone,
+          gender: updatedUser.gender,
+          rent: updatedUser.rent,
+          duration: updatedUser.duration,
+          roomPhoto: updatedUser.roomPhoto,
+          foodPref: updatedUser.foodPref,
+          smoking: updatedUser.smoking,
+          pets: updatedUser.pets,
+          cleanliness: updatedUser.cleanliness,
+          sleepSchedule: updatedUser.sleepSchedule,
           isVerified: updatedUser.isVerified,
           createdAt: updatedUser.createdAt,
         },
