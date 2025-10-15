@@ -2,12 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 
-interface AuthRequest extends Request {
-  user?: any;
-}
-
 export const authenticate = async (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -24,7 +20,7 @@ export const authenticate = async (
 
     token = token.slice(7); // Remove 'Bearer ' prefix
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
     
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {
@@ -47,7 +43,7 @@ export const authenticate = async (
 };
 
 export const optionalAuth = async (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -60,7 +56,7 @@ export const optionalAuth = async (
 
     token = token.slice(7);
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
     const user = await User.findById(decoded.id).select('-password');
     
     if (user) {
