@@ -30,7 +30,7 @@ services:
     container_name: co-spotter-server
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
       NODE_ENV: development
       MONGODB_URI: mongodb://admin:password@mongodb:27017/co-spotter?authSource=admin
@@ -51,7 +51,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: http://localhost:5000/api
+      VITE_API_URL: http://localhost:5001/api
     volumes:
       - ./client:/app
       - /app/node_modules

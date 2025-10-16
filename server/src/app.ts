@@ -1,3 +1,4 @@
+// server.ts
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -27,7 +28,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow tools like Postman (no Origin header)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error('CORS not allowed for this origin'), false);

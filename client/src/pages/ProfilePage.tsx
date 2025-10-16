@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Camera, Save, Eye, MapPin, DollarSign, Calendar } from "lucide-react";
+import { Camera, Save, Eye, MapPin, IndianRupee, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const ProfilePage = () => {
   const { user, token, isAuthenticated, isLoading } = useAuth();
@@ -43,7 +45,6 @@ const ProfilePage = () => {
     sleepSchedule: "early",
   });
 
-  // Wait for auth to finish loading before redirecting
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) {
@@ -51,24 +52,21 @@ const ProfilePage = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  // CHANGED: Load complete profile data from database
   useEffect(() => {
     const loadCompleteProfileData = async () => {
       if (!token) return;
-      
       try {
-        const response = await fetch('http://localhost:5000/api/auth/profile', {
+        const response = await fetch('http://localhost:5001/api/auth/profile', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
-        
         const data = await response.json();
         if (data.success && data.data.user) {
           const userData = data.data.user;
           setProfileData({
             name: userData.username || "",
-            email: userData.email || "",
+            email: userData.email || user.email || "",
             bio: userData.bio || "",
             location: userData.location || "",
             age: userData.age?.toString() || "",
@@ -87,7 +85,6 @@ const ProfilePage = () => {
         console.error('Error loading complete profile data:', error);
       }
     };
-    
     if (user && token) {
       loadCompleteProfileData();
     }
@@ -96,24 +93,20 @@ const ProfilePage = () => {
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !token) return;
-
     setIsUploadingAvatar(true);
     const formData = new FormData();
     formData.append('image', file);
-
     try {
-      const response = await fetch('http://localhost:5000/api/upload/avatar', {
+      const response = await fetch('http://localhost:5001/api/upload/avatar', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
         body: formData,
       });
-
       const data = await response.json();
       if (data.success) {
-        // UPDATE: Also update the user's avatar in database
-        const updateResponse = await fetch("http://localhost:5000/api/auth/profile/update", {
+        const updateResponse = await fetch("http://localhost:5001/api/auth/profile/update", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -121,10 +114,8 @@ const ProfilePage = () => {
           },
           body: JSON.stringify({ avatar: data.data.image.url }),
         });
-
         if (updateResponse.ok) {
           toast.success('Profile picture updated!');
-          // Refresh the page or update auth context
           window.location.reload();
         } else {
           toast.error('Failed to save avatar to profile');
@@ -139,28 +130,23 @@ const ProfilePage = () => {
     }
   };
 
-  // CHANGED: Updated room photo upload to use /room-photo endpoint
   const handleRoomPhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !token) return;
-
     setIsUploadingRoom(true);
     const formData = new FormData();
     formData.append('image', file);
-
     try {
-      const response = await fetch('http://localhost:5000/api/upload/room-photo', {
+      const response = await fetch('http://localhost:5001/api/upload/room-photo', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
         body: formData,
       });
-
       const data = await response.json();
       if (data.success) {
-        // Save room photo URL to profile
-        const updateResponse = await fetch("http://localhost:5000/api/auth/profile/update", {
+        const updateResponse = await fetch("http://localhost:5001/api/auth/profile/update", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -168,7 +154,6 @@ const ProfilePage = () => {
           },
           body: JSON.stringify({ roomPhoto: data.data.image.url }),
         });
-
         if (updateResponse.ok) {
           toast.success('Room photo updated!');
         } else {
@@ -190,29 +175,59 @@ const ProfilePage = () => {
       toast.error("Please login to update your profile");
       return;
     }
-
     setIsSaving(true);
-
     try {
-      const response = await fetch("http://localhost:5000/api/auth/profile/update", {
+      // 1. Update basic user profile info
+      const profileResponse = await fetch("http://localhost:5001/api/auth/profile/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify({
+          name: profileData.name,
+          age: profileData.age,
+          phone: profileData.phone,
+          email: profileData.email,  // Add this line
+          bio: profileData.bio,
+          gender: profileData.gender,
+          foodPref: profileData.foodPref,
+          smoking: profileData.smoking,
+          pets: profileData.pets,
+          cleanliness: profileData.cleanliness,
+          sleepSchedule: profileData.sleepSchedule,
+        }),
       });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success("Profile updated successfully!");
-      } else {
-        toast.error(data.message || "Failed to update profile");
+  
+      const profileDataRes = await profileResponse.json();
+      if (!profileDataRes.success) {
+        throw new Error(profileDataRes.message || "Failed to update basic profile");
       }
+  
+      // 2. Update room details
+      const roomResponse = await fetch("http://localhost:5001/api/profiles/post-room", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rent: profileData.rent,
+          duration: profileData.duration,
+          location: profileData.location,
+          images: [], // placeholder, or replace with your upload image URLs
+        }),
+      });
+  
+      const roomDataRes = await roomResponse.json();
+      if (!roomDataRes.success) {
+        throw new Error(roomDataRes.message || "Failed to update room info");
+      }
+  
+      toast.success("Profile and room updated successfully!");
     } catch (error) {
       console.error("Profile update error:", error);
-      toast.error("Network error. Please try again.");
+      toast.error(error.message || "Network error. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -222,7 +237,6 @@ const ProfilePage = () => {
     toast.info("Preview feature coming soon!");
   };
 
-  // Show loading while auth initializes
   if (isLoading) {
     return (
       <div className="min-h-screen pt-20 bg-background flex items-center justify-center">
@@ -233,7 +247,6 @@ const ProfilePage = () => {
     );
   }
 
-  // Show redirect message only after loading completes
   if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen pt-20 bg-background flex items-center justify-center">
@@ -247,7 +260,6 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen pt-20 bg-background">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">
             Your <span className="text-gradient">Profile</span>
@@ -258,7 +270,6 @@ const ProfilePage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Picture Section */}
           <aside className="lg:col-span-1">
             <Card className="bg-card border-border sticky top-24">
               <CardContent className="p-6">
@@ -347,9 +358,7 @@ const ProfilePage = () => {
             </Card>
           </aside>
 
-          {/* Main Form */}
           <main className="lg:col-span-2 space-y-6">
-            {/* Personal Information */}
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
@@ -440,7 +449,6 @@ const ProfilePage = () => {
               </CardContent>
             </Card>
 
-            {/* Room Details */}
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle>Room Details</CardTitle>
@@ -461,10 +469,61 @@ const ProfilePage = () => {
                       className="bg-background"
                       placeholder="City, State"
                     />
+
+                {profileData.location && profileData.location.includes(",") ? (
+                  (() => {
+                        const [lat, lon] = profileData.location.split(",").map(Number);
+                        return (
+                          <div className="mt-2 rounded-lg overflow-hidden">
+                            <iframe
+                              title="Room Location Map"
+                              width="100%"
+                              height="200"
+                              style={{ border: 0 }}
+                              loading="lazy"
+                              allowFullScreen
+                              referrerPolicy="no-referrer-when-downgrade"
+                              src={`https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}&layer=mapnik&marker=${lat},${lon}`}
+                            ></iframe>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="mt-2 rounded-lg overflow-hidden">
+                        <iframe
+                          title="Room Location Map"
+                          width="100%"
+                          height="200"
+                          style={{ border: 0 }}
+                          loading="lazy"
+                          allowFullScreen
+                          referrerPolicy="no-referrer-when-downgrade"
+                          src={`https://www.openstreetmap.org/export/embed.html?search=${encodeURIComponent(
+                            profileData.location
+                          )}`}
+                        ></iframe>
+                      </div>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.geolocation.getCurrentPosition((pos) => {
+                          const { latitude, longitude } = pos.coords;
+                          setProfileData({
+                            ...profileData,
+                            location: `${latitude}, ${longitude}`,
+                          });
+                        });
+                      }}
+                    >
+                      Use My Location
+                    </Button>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="rent" className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-primary" />
+                      <IndianRupee className="w-4 h-4 text-primary" />
                       Monthly Rent
                     </Label>
                     <Input
@@ -498,7 +557,6 @@ const ProfilePage = () => {
               </CardContent>
             </Card>
 
-            {/* Roommate Preferences */}
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle>Roommate Preferences</CardTitle>
@@ -613,4 +671,3 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
-

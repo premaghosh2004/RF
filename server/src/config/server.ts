@@ -8,7 +8,7 @@ import app from '../app';
 import { connectDatabase } from '../config/database';
 import { initializeSocket } from '../config/socket';
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Create HTTP server
 const server = createServer(app);

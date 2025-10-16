@@ -10,7 +10,7 @@ class SocketService {
       return;
     }
 
-    this.socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+    this.socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001', {
       auth: { token },
       transports: ['websocket'],
       timeout: 20000,
