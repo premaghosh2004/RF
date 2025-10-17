@@ -97,6 +97,9 @@ export const profilesAPI = {
     
   saveProfile: (id: string) =>
     api.post(`/profiles/${id}/save`),
+  createProfile: (data) => api.post('/profiles', data),
+  updateProfile: (id, data) => api.put(`/profiles/${id}`, data),
+  updateRoomDetails: (id, data) => api.patch(`/profiles/${id}/room-details`, data),
 };
 
 export const uploadAPI = {
@@ -118,3 +121,4 @@ export const uploadAPI = {
     });
   },
 };
+

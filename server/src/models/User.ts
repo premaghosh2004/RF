@@ -9,6 +9,7 @@ export interface IUser extends Document {
   avatar?: string;
   bio?: string;
   location?: string;
+  roomPhotos?: string[];
   
   // Add all the profile fields
   age?: number;
@@ -90,9 +91,9 @@ const UserSchema = new Schema<IUser>({
     type: Number,
     min: 1,
   },
-  roomPhoto: {
+  roomPhotos: [{
     type: String,
-  },
+  }],
   
   // Roommate preferences
   foodPref: {

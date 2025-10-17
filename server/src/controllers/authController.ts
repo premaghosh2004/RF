@@ -76,7 +76,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           gender: user.gender,
           rent: user.rent,
           duration: user.duration,
-          roomPhoto: user.roomPhoto,
+          roomPhotos: user.roomPhotos,
           foodPref: user.foodPref,
           smoking: user.smoking,
           pets: user.pets,
@@ -150,7 +150,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           gender: user.gender,
           rent: user.rent,
           duration: user.duration,
-          roomPhoto: user.roomPhoto,
+          roomPhotos: user.roomPhotos,
           foodPref: user.foodPref,
           smoking: user.smoking,
           pets: user.pets,
@@ -208,7 +208,7 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
           gender: user.gender,
           rent: user.rent,
           duration: user.duration,
-          roomPhoto: user.roomPhoto,
+          roomPhotos: user.roomPhotos,
           foodPref: user.foodPref,
           smoking: user.smoking,
           pets: user.pets,
@@ -243,7 +243,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     const { 
       name, bio, location, phone, age, gender, 
       rent, duration, foodPref, smoking, pets, 
-      cleanliness, sleepSchedule, avatar, roomPhoto 
+      cleanliness, sleepSchedule, avatar, roomPhotos 
     } = req.body;
 
     const updateData: any = {};
@@ -263,7 +263,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (cleanliness !== undefined) updateData.cleanliness = cleanliness;
     if (sleepSchedule !== undefined) updateData.sleepSchedule = sleepSchedule;
     if (avatar !== undefined) updateData.avatar = avatar;
-    if (roomPhoto !== undefined) updateData.roomPhoto = roomPhoto;
+    if (roomPhotos !== undefined) updateData.roomPhotos = roomPhotos;
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
@@ -295,7 +295,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
           gender: updatedUser.gender,
           rent: updatedUser.rent,
           duration: updatedUser.duration,
-          roomPhoto: updatedUser.roomPhoto,
+          roomPhotos: updatedUser.roomPhotos,
           foodPref: updatedUser.foodPref,
           smoking: updatedUser.smoking,
           pets: updatedUser.pets,

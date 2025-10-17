@@ -27,7 +27,7 @@ const ProfilePage = () => {
   const [isUploadingRoom, setIsUploadingRoom] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const roomPhotoInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -35,6 +35,8 @@ const ProfilePage = () => {
     age: "",
     phone: "",
     location: "",
+    lat: "",
+    lon: "",
     rent: "",
     duration: "",
     bio: "",
@@ -43,6 +45,8 @@ const ProfilePage = () => {
     pets: false,
     cleanliness: "high",
     sleepSchedule: "early",
+    roomPhotos: [],
+    avatar: ""
   });
 
   useEffect(() => {
@@ -52,7 +56,7 @@ const ProfilePage = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  useEffect(() => {
+ 
     const loadCompleteProfileData = async () => {
       if (!token) return;
       try {
@@ -65,26 +69,31 @@ const ProfilePage = () => {
         if (data.success && data.data.user) {
           const userData = data.data.user;
           setProfileData({
-            name: userData.username || "",
-            email: userData.email || user.email || "",
-            bio: userData.bio || "",
-            location: userData.location || "",
-            age: userData.age?.toString() || "",
-            phone: userData.phone || "",
-            gender: userData.gender || "male",
-            rent: userData.rent?.toString() || "",
-            duration: userData.duration?.toString() || "",
-            foodPref: userData.foodPref || "vegetarian",
-            smoking: userData.smoking || false,
-            pets: userData.pets || false,
-            cleanliness: userData.cleanliness || "high",
-            sleepSchedule: userData.sleepSchedule || "early",
-          });
+  name: userData.username || "",
+  email: userData.email || user.email || "",
+  bio: userData.bio || "",
+  location: userData.location || "",
+  lat: userData.lat?.toString() || "",
+  lon: userData.lon?.toString() || "",
+  age: userData.age?.toString() || "",
+  phone: userData.phone || "",
+  gender: userData.gender || "male",
+  rent: userData.rent?.toString() || "",
+  duration: userData.duration?.toString() || "",
+  foodPref: userData.foodPref || "vegetarian",
+  smoking: userData.smoking || false,
+  pets: userData.pets || false,
+  cleanliness: userData.cleanliness || "high",
+  sleepSchedule: userData.sleepSchedule || "early",
+  roomPhotos: Array.isArray(userData.roomPhotos) ? userData.roomPhotos : [],
+  avatar: userData.avatar || ""    
+});
         }
       } catch (error) {
         console.error('Error loading complete profile data:', error);
       }
     };
+    useEffect(() => {
     if (user && token) {
       loadCompleteProfileData();
     }
@@ -114,10 +123,24 @@ const ProfilePage = () => {
           },
           body: JSON.stringify({ avatar: data.data.image.url }),
         });
-        if (updateResponse.ok) {
-          toast.success('Profile picture updated!');
-          window.location.reload();
-        } else {
+       if (updateResponse.ok) {
+  toast.success('Profile picture updated!');
+  // Fetch the latest user profile from backend
+  const profileRes = await fetch('http://localhost:5001/api/auth/profile', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const profileData = await profileRes.json();
+  if (profileData.success && profileData.data.user) {
+    // Update localStorage and context
+    localStorage.setItem('user', JSON.stringify(profileData.data.user));
+    // If your useAuth provides a setUser or login method, call it here:
+    if (typeof user === 'object' && user) {
+      Object.assign(user, profileData.data.user); // update in-place for context
+    }
+    setProfileData(prev => ({ ...prev, avatar: profileData.data.user.avatar }));
+  }
+}
+ else {
           toast.error('Failed to save avatar to profile');
         }
       } else {
@@ -131,64 +154,77 @@ const ProfilePage = () => {
   };
 
   const handleRoomPhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !token) return;
-    setIsUploadingRoom(true);
+  const files = event.target.files;
+  if (!files || !token) return;
+  setIsUploadingRoom(true);
+
+  const uploadedUrls: string[] = [];
+
+  for (let i = 0; i < files.length; i++) {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('image', files[i]);
+
     try {
       const response = await fetch('http://localhost:5001/api/upload/room-photo', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       });
       const data = await response.json();
       if (data.success) {
-        const updateResponse = await fetch("http://localhost:5001/api/auth/profile/update", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-          body: JSON.stringify({ roomPhoto: data.data.image.url }),
-        });
-        if (updateResponse.ok) {
-          toast.success('Room photo updated!');
-        } else {
-          toast.error('Failed to save room photo');
-        }
+        uploadedUrls.push(data.data.image.url);
       } else {
-        toast.error(data.message || 'Upload failed');
+        toast.error(data.message || 'Upload failed for one image');
       }
     } catch (error) {
       console.error('Room upload error:', error);
       toast.error('Network error during upload');
-    } finally {
-      setIsUploadingRoom(false);
     }
-  };
+  }
 
-  const handleSave = async () => {
+  // Update profileData with new photos
+  if (uploadedUrls.length > 0) {
+    setProfileData(prev => ({
+      ...prev,
+      roomPhotos: [...prev.roomPhotos, ...uploadedUrls]
+    }));
+
+    // Optionally, send updated array to backend
+    await fetch("http://localhost:5001/api/auth/profile/update", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ roomPhotos: [...profileData.roomPhotos, ...uploadedUrls] }),
+    });
+
+    toast.success('Room photos updated!');
+  }
+
+  setIsUploadingRoom(false);
+};
+
+
+   const handleSave = async () => {
     if (!token) {
       toast.error("Please login to update your profile");
       return;
     }
     setIsSaving(true);
     try {
-      // 1. Update basic user profile info
-      const profileResponse = await fetch("http://localhost:5001/api/auth/profile/update", {
+      const response = await fetch("http://localhost:5001/api/auth/profile/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
+        // CHANGED: Send lat and lon to backend
         body: JSON.stringify({
           name: profileData.name,
           age: profileData.age,
           phone: profileData.phone,
-          email: profileData.email,  // Add this line
+          email: profileData.email,
           bio: profileData.bio,
           gender: profileData.gender,
           foodPref: profileData.foodPref,
@@ -196,34 +232,19 @@ const ProfilePage = () => {
           pets: profileData.pets,
           cleanliness: profileData.cleanliness,
           sleepSchedule: profileData.sleepSchedule,
-        }),
-      });
-  
-      const profileDataRes = await profileResponse.json();
-      if (!profileDataRes.success) {
-        throw new Error(profileDataRes.message || "Failed to update basic profile");
-      }
-  
-      // 2. Update room details
-      const roomResponse = await fetch("http://localhost:5001/api/profiles/post-room", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
           rent: profileData.rent,
           duration: profileData.duration,
           location: profileData.location,
-          images: [], // placeholder, or replace with your upload image URLs
+          lat: profileData.lat,
+          lon: profileData.lon,
+          roomPhotos: profileData.roomPhotos,
+          avatar: profileData.avatar
         }),
       });
-  
-      const roomDataRes = await roomResponse.json();
-      if (!roomDataRes.success) {
-        throw new Error(roomDataRes.message || "Failed to update room info");
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Failed to update profile");
       }
-  
       toast.success("Profile and room updated successfully!");
     } catch (error) {
       console.error("Profile update error:", error);
@@ -232,20 +253,6 @@ const ProfilePage = () => {
       setIsSaving(false);
     }
   };
-
-  const handlePreview = () => {
-    toast.info("Preview feature coming soon!");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen pt-20 bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading your session...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!isAuthenticated || !user) {
     return (
@@ -276,7 +283,7 @@ const ProfilePage = () => {
                 <div className="text-center space-y-4">
                   <div className="relative mx-auto w-40 h-40">
                     <img
-                      src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+                      src={profileData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
                       alt="Profile"
                       className="w-full h-full rounded-full ring-4 ring-primary/20"
                     />
@@ -310,27 +317,39 @@ const ProfilePage = () => {
                 <div className="mt-6 pt-6 border-t border-border">
                   <h4 className="font-semibold mb-4">Room Photo</h4>
                   <div className="relative">
-                    <img
-                      src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400"
-                      alt="Room"
-                      className="w-full h-40 object-cover rounded-lg"
-                    />
-                    <input
-                      type="file"
-                      ref={roomPhotoInputRef}
-                      onChange={handleRoomPhotoUpload}
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                    />
-                    <Button
-                      size="icon"
-                      className="absolute bottom-2 right-2 rounded-full gradient-primary text-white"
-                      onClick={() => roomPhotoInputRef.current?.click()}
-                      disabled={isUploadingRoom}
-                    >
-                      <Camera className="w-4 h-4" />
-                    </Button>
-                  </div>
+  <div className="grid grid-cols-2 gap-2 mt-2">
+    {profileData.roomPhotos.length > 0 ? (
+      profileData.roomPhotos.map((photo, index) => (
+        <img
+          key={index}
+          src={photo}
+          alt={`Room ${index + 1}`}
+          className="w-full h-32 object-cover rounded-lg"
+        />
+      ))
+    ) : (
+      <p className="text-sm text-muted-foreground">No room photos uploaded yet.</p>
+    )}
+  </div>
+
+  <input
+    type="file"
+    ref={roomPhotoInputRef}
+    onChange={handleRoomPhotoUpload}
+    accept="image/*"
+    multiple
+    style={{ display: 'none' }}
+  />
+  <Button
+    size="icon"
+    className="absolute bottom-2 right-2 rounded-full gradient-primary text-white"
+    onClick={() => roomPhotoInputRef.current?.click()}
+    disabled={isUploadingRoom}
+  >
+    <Camera className="w-4 h-4" />
+  </Button>
+</div>
+
                   <p className="text-xs text-muted-foreground mt-2">
                     Upload a clear photo of your available room
                   </p>
@@ -345,14 +364,7 @@ const ProfilePage = () => {
                     <Save className="w-4 h-4 mr-2" />
                     {isSaving ? "Saving..." : "Save Changes"}
                   </Button>
-                  <Button
-                    onClick={handlePreview}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Preview Profile
-                  </Button>
+                  
                 </div>
               </CardContent>
             </Card>
@@ -470,56 +482,53 @@ const ProfilePage = () => {
                       placeholder="City, State"
                     />
 
-                {profileData.location && profileData.location.includes(",") ? (
-                  (() => {
-                        const [lat, lon] = profileData.location.split(",").map(Number);
-                        return (
-                          <div className="mt-2 rounded-lg overflow-hidden">
-                            <iframe
-                              title="Room Location Map"
-                              width="100%"
-                              height="200"
-                              style={{ border: 0 }}
-                              loading="lazy"
-                              allowFullScreen
-                              referrerPolicy="no-referrer-when-downgrade"
-                              src={`https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}&layer=mapnik&marker=${lat},${lon}`}
-                            ></iframe>
-                          </div>
-                        );
-                      })()
-                    ) : (
-                      <div className="mt-2 rounded-lg overflow-hidden">
-                        <iframe
-                          title="Room Location Map"
-                          width="100%"
-                          height="200"
-                          style={{ border: 0 }}
-                          loading="lazy"
-                          allowFullScreen
-                          referrerPolicy="no-referrer-when-downgrade"
-                          src={`https://www.openstreetmap.org/export/embed.html?search=${encodeURIComponent(
-                            profileData.location
-                          )}`}
-                        ></iframe>
-                      </div>
-                    )}
+               {profileData.lat && profileData.lon ? (
+                    <iframe
+                      title="Room Location Map"
+                      width="100%"
+                      height="200"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${profileData.lon - 0.01},${profileData.lat - 0.01},${parseFloat(profileData.lon) + 0.01},${parseFloat(profileData.lat) + 0.01}&layer=mapnik&marker=${profileData.lat},${profileData.lon}`}
+                    ></iframe>
+                  ) : (
+                    <iframe
+                      title="Room Location Map"
+                      width="100%"
+                      height="200"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://www.openstreetmap.org/export/embed.html?search=${encodeURIComponent(profileData.location)}`}
+                    ></iframe>
+                  )}
 
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigator.geolocation.getCurrentPosition((pos) => {
-                          const { latitude, longitude } = pos.coords;
-                          setProfileData({
-                            ...profileData,
-                            location: `${latitude}, ${longitude}`,
-                          });
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.geolocation.getCurrentPosition(async (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        // Reverse geocode to get address
+                        const res = await fetch(
+                          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+                        );
+                        const data = await res.json();
+                        const address = data.display_name || `${data.address.city || data.address.town || data.address.village || ''}, ${data.address.state || ''}`;
+                        setProfileData({
+                          ...profileData,
+                          location: address,
+                          lat: latitude.toString(),
+                          lon: longitude.toString()
                         });
-                      }}
-                    >
-                      Use My Location
-                    </Button>
+                      });
+                    }}
+                  >
+                    Use My Location
+                  </Button>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="rent" className="flex items-center gap-2">
