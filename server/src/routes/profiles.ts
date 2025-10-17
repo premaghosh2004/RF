@@ -3,7 +3,10 @@ import RoomieProfile from '../models/RoomieProfile';
 
 const router = Router();
 
-// POST /api/profiles - Create new roommate profile
+/**
+ * 🏠 POST /api/profiles
+ * Create a new roommate profile
+ */
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const {
@@ -41,7 +44,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       preferences: preferences || {},
       roomDetails: roomDetails || { isOffering: false },
       traits: traits || [],
-      interests: interests || []
+      interests: interests || [],
+      profileViews: 0,
+      isActive: true
     });
 
     const savedProfile = await newProfile.save();
@@ -51,7 +56,6 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       data: { profile: savedProfile },
       message: 'Profile created successfully'
     });
-
   } catch (error) {
     console.error('Create profile error:', error);
     res.status(500).json({
@@ -61,7 +65,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// PUT /api/profiles/:id - Update existing profile
+/**
+ * ✏️ PUT /api/profiles/:id
+ * Update existing profile
+ */
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -86,7 +93,6 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       data: { profile: updatedProfile },
       message: 'Profile updated successfully'
     });
-
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({
@@ -96,13 +102,15 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// PATCH /api/profiles/:id/room-details - Update only roomDetails
+/**
+ * 🏡 PATCH /api/profiles/:id/room-details
+ * Update only roomDetails
+ */
 router.patch('/:id/room-details', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { rent, duration, location, images, description, amenities, roomType, isOffering } = req.body;
 
-    // Build roomDetails object
     const roomDetailsUpdate: any = {};
     if (rent !== undefined) roomDetailsUpdate['roomDetails.rent'] = parseInt(rent);
     if (duration !== undefined) roomDetailsUpdate['roomDetails.duration'] = duration;
@@ -132,7 +140,6 @@ router.patch('/:id/room-details', async (req: Request, res: Response): Promise<v
       data: { profile: updatedProfile },
       message: 'Room details updated successfully'
     });
-
   } catch (error) {
     console.error('Update room details error:', error);
     res.status(500).json({
@@ -142,7 +149,10 @@ router.patch('/:id/room-details', async (req: Request, res: Response): Promise<v
   }
 });
 
-// GET /api/profiles - Search roommate profiles (Kolkata-focused)
+/**
+ * 🔍 GET /api/profiles
+ * Search roommate profiles (Kolkata-focused)
+ */
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const {
@@ -159,41 +169,40 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     } = req.query;
 
     const filter: any = { isActive: true };
-    
+    const orConditions: any[] = [];
+
     if (city) {
-      filter['location.city'] = { $regex: new RegExp(city as string, 'i') };
+      orConditions.push(
+        { 'location.city': { $regex: new RegExp(city as string, 'i') } },
+        { 'location.area': { $regex: new RegExp(city as string, 'i') } }
+      );
     }
+
     if (state) {
       filter['location.state'] = { $regex: new RegExp(state as string, 'i') };
     }
 
     if (minRent || maxRent) {
-      const rentConditions: any[] = [];
-      
       if (minRent) {
-        rentConditions.push(
+        orConditions.push(
           { 'preferences.rentRange.max': { $gte: parseInt(minRent as string) } },
           { 'roomDetails.rent': { $gte: parseInt(minRent as string) } }
         );
       }
       if (maxRent) {
-        rentConditions.push(
+        orConditions.push(
           { 'preferences.rentRange.min': { $lte: parseInt(maxRent as string) } },
           { 'roomDetails.rent': { $lte: parseInt(maxRent as string) } }
         );
       }
-      
-      if (rentConditions.length > 0) {
-        filter.$or = rentConditions;
-      }
     }
 
     if (gender && gender !== 'Any') {
-      filter.$or = [
+      orConditions.push(
         { 'preferences.genderPreference': 'Any' },
         { 'preferences.genderPreference': gender },
-        { gender: gender }
-      ];
+        { gender }
+      );
     }
 
     if (foodPreference && foodPreference !== 'Any') {
@@ -204,22 +213,19 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       filter['preferences.duration'] = { $in: ['Flexible', duration] };
     }
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    
-    let sortOption: any = { createdAt: -1 };
-    switch (sortBy) {
-      case 'rent':
-        sortOption = { 'roomDetails.rent': 1, 'preferences.rentRange.min': 1 };
-        break;
-      case 'age':
-        sortOption = { age: 1 };
-        break;
-      case 'views':
-        sortOption = { profileViews: -1 };
-        break;
-      default:
-        sortOption = { createdAt: -1 };
+    if (orConditions.length > 0) {
+      filter.$or = orConditions;
     }
+
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const sortOptions: Record<string, any> = {
+      rent: { 'roomDetails.rent': 1, 'preferences.rentRange.min': 1 },
+      age: { age: 1 },
+      views: { profileViews: -1 },
+      recent: { createdAt: -1 },
+    };
+    const sortOption = sortOptions[sortBy as string] || { createdAt: -1 };
 
     const profiles = await RoomieProfile.find(filter)
       .sort(sortOption)
@@ -230,7 +236,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const profilesWithCompatibility = profiles.map(profile => ({
       ...profile,
-      compatibility: Math.floor(Math.random() * (95 - 70) + 70),
+      compatibility: 70 + Math.floor(Math.random() * 26),
       isSaved: false
     }));
 
@@ -250,7 +256,6 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
         }
       }
     });
-
   } catch (error) {
     console.error('Get profiles error:', error);
     res.status(500).json({
@@ -260,7 +265,10 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// GET /api/profiles/:id - Get specific profile
+/**
+ * 👤 GET /api/profiles/:id
+ * Get specific roommate profile
+ */
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const profile = await RoomieProfile.findOne({
@@ -282,7 +290,6 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       success: true,
       data: { profile }
     });
-
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({
@@ -292,12 +299,15 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// GET /api/profiles/search/suggestions - Location suggestions
+/**
+ * 📍 GET /api/profiles/search/suggestions
+ * Provide location suggestions for search bar
+ */
 router.get('/search/suggestions', async (req: Request, res: Response): Promise<void> => {
   try {
     const { q, type = 'city' } = req.query;
-    
-    if (!q || (q as string).length < 2) {
+
+    if (!q || (q as string).trim().length < 2) {
       res.json({
         success: true,
         data: { suggestions: ['Kolkata', 'New Town', 'Salt Lake', 'Howrah', 'Park Street'] }
@@ -305,21 +315,21 @@ router.get('/search/suggestions', async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const suggestions = type === 'city' 
-      ? await RoomieProfile.distinct('location.city', {
-          'location.city': { $regex: new RegExp(q as string, 'i') },
-          isActive: true
-        })
-      : await RoomieProfile.distinct('location.area', {
-          'location.area': { $regex: new RegExp(q as string, 'i') },
-          isActive: true
-        });
+    const suggestions =
+      type === 'city'
+        ? await RoomieProfile.distinct('location.city', {
+            'location.city': { $regex: new RegExp(q as string, 'i') },
+            isActive: true
+          })
+        : await RoomieProfile.distinct('location.area', {
+            'location.area': { $regex: new RegExp(q as string, 'i') },
+            isActive: true
+          });
 
     res.json({
       success: true,
       data: { suggestions: suggestions.slice(0, 10) }
     });
-
   } catch (error) {
     console.error('Get suggestions error:', error);
     res.status(500).json({

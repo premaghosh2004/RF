@@ -70,16 +70,16 @@ const FindRoomie: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Location in Kolkata</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Enter area (e.g., New Town, Salt Lake)" 
-                      className="pl-10 bg-background" 
-                      value={city} 
-                      onChange={e => setCity(e.target.value || 'Kolkata')} 
-                    />
-                  </div>
+                  <Label>Location (City or Area)</Label>
+<div className="relative">
+  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+  <Input
+  placeholder="Enter city or area (e.g., Laketown, Kolkata)"
+  className="pl-10 bg-background"
+  value={city}
+  onChange={e => setCity(e.target.value)}
+/>
+</div>
                 </div>
 
                 <div className="space-y-2">

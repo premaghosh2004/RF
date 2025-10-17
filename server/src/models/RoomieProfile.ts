@@ -67,7 +67,7 @@ const RoomieProfileSchema: Schema = new Schema({
     petPreference: { type: String, enum: ['Pet-friendly', 'No pets', 'Any'], default: 'Any' },
     schedule: { type: String, enum: ['Early riser', 'Night owl', 'Flexible'], default: 'Flexible' }
   },
-  roomDetails: {
+ roomDetails: {
     isOffering: { type: Boolean, default: false },
     rent: { type: Number, min: 0 },
     images: [String],
