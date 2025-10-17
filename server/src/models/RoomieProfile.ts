@@ -80,7 +80,7 @@ const RoomieProfileSchema: Schema = new Schema({
   isActive: { type: Boolean, default: true },
   profileViews: { type: Number, default: 0 },
   savedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }]
-}, { timestamps: true });
+}, { timestamps: true, minimize: false });
 
 // Index for Kolkata-focused search
 RoomieProfileSchema.index({ 'location.city': 1, 'location.state': 1, isActive: 1 });
