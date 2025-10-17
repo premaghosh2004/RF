@@ -3,6 +3,145 @@ import RoomieProfile from '../models/RoomieProfile';
 
 const router = Router();
 
+// POST /api/profiles - Create new roommate profile
+router.post('/', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      userId,
+      name,
+      age,
+      gender,
+      avatar,
+      bio,
+      location,
+      preferences,
+      roomDetails,
+      traits,
+      interests
+    } = req.body;
+
+    // Validate required fields
+    if (!userId || !name || !age || !gender) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing required fields: userId, name, age, gender'
+      });
+      return;
+    }
+
+    // Create new profile with roomDetails
+    const newProfile = new RoomieProfile({
+      userId,
+      name,
+      age,
+      gender,
+      avatar,
+      bio,
+      location: location || { city: 'Kolkata', state: 'West Bengal' },
+      preferences: preferences || {},
+      roomDetails: roomDetails || { isOffering: false },
+      traits: traits || [],
+      interests: interests || []
+    });
+
+    const savedProfile = await newProfile.save();
+
+    res.status(201).json({
+      success: true,
+      data: { profile: savedProfile },
+      message: 'Profile created successfully'
+    });
+
+  } catch (error) {
+    console.error('Create profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while creating profile'
+    });
+  }
+});
+
+// PUT /api/profiles/:id - Update existing profile
+router.put('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const updatedProfile = await RoomieProfile.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-savedBy');
+
+    if (!updatedProfile) {
+      res.status(404).json({
+        success: false,
+        message: 'Profile not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: { profile: updatedProfile },
+      message: 'Profile updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating profile'
+    });
+  }
+});
+
+// PATCH /api/profiles/:id/room-details - Update only roomDetails
+router.patch('/:id/room-details', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { rent, duration, location, images, description, amenities, roomType, isOffering } = req.body;
+
+    // Build roomDetails object
+    const roomDetailsUpdate: any = {};
+    if (rent !== undefined) roomDetailsUpdate['roomDetails.rent'] = parseInt(rent);
+    if (duration !== undefined) roomDetailsUpdate['roomDetails.duration'] = duration;
+    if (location !== undefined) roomDetailsUpdate['roomDetails.location'] = location;
+    if (images !== undefined) roomDetailsUpdate['roomDetails.images'] = images;
+    if (description !== undefined) roomDetailsUpdate['roomDetails.description'] = description;
+    if (amenities !== undefined) roomDetailsUpdate['roomDetails.amenities'] = amenities;
+    if (roomType !== undefined) roomDetailsUpdate['roomDetails.roomType'] = roomType;
+    if (isOffering !== undefined) roomDetailsUpdate['roomDetails.isOffering'] = isOffering;
+
+    const updatedProfile = await RoomieProfile.findByIdAndUpdate(
+      id,
+      { $set: roomDetailsUpdate },
+      { new: true, runValidators: true }
+    ).select('-savedBy');
+
+    if (!updatedProfile) {
+      res.status(404).json({
+        success: false,
+        message: 'Profile not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: { profile: updatedProfile },
+      message: 'Room details updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update room details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating room details'
+    });
+  }
+});
+
 // GET /api/profiles - Search roommate profiles (Kolkata-focused)
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
